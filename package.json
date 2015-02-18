@@ -22,7 +22,8 @@
     "request": "~2.27.0",
     "cheerio": "~0.12.1",
     "twit": "~1.1.9",
-    "underscore.deferred": "~0.4.0"
+    "underscore.deferred": "~0.4.0",
+    "nlp_compromise": "~0.3.1"
   },
   "devDependencies": {
     "grunt": "~0.4.1",

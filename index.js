@@ -9,21 +9,66 @@ var cheerio = require('cheerio');
 var _ = require('underscore.deferred');
 var Twit = require('twit');
 var T = new Twit(require('./config.js'));
+var nlp = require('nlp_compromise');
 
 var baseUrl = 'http://news.google.com';
 
+
+// TODO: look at huffingboingboing bot for better handling of config elements
+// with regards to git and heroku
+
 // ### Utility Functions
 
-// This function lets us call `pick()` on any array to get a random element from it.
-Array.prototype.pick = function() {
-  return this[Math.floor(Math.random()*this.length)];
+// adding to array.prototype caused issues with nlp_compromise
+// get random element from array
+var pick = function(arr) {
+  return arr[Math.floor(Math.random()*arr.length)];
 };
 
-// This function lets us call `pickRemove()` on any array to get a random element
-// from it, then remove that element so we can't get it again.
-Array.prototype.pickRemove = function() {
-  var index = Math.floor(Math.random()*this.length);
-  return this.splice(index,1)[0];
+// get a random element from an array
+// then remove that element so we can't get it again.
+var pickRemove = function(arr) {
+  var index = Math.floor(Math.random()*arr.length);
+  return arr.splice(index,1)[0];
+};
+
+
+var getRandom = function(min,max) {
+  return Math.floor(Math.random() * (max - min) + min);
+};
+
+var stripWord = function(word) {
+
+    // let punctuation and possessives remain
+    // TODO: unit-tests for various errors we encounter
+    // Venice's := Venice
+    // VENICE'S := VENICE
+    // etc.
+    var removals = ['"', ':', '-', ',', '\'s$', '\\(', '\\)', '\\[', '\\]' ];
+
+    for (var i = 0 ; i < removals.length; i++) {
+	var r = removals[i];
+	word = word.replace(new RegExp(r, 'i'), '');
+    }
+
+    return word;
+};
+
+
+var getNNarray = function(headline) {
+
+  var nn = [];
+  var nouns = nlp.pos(headline).nouns();
+
+  for (var i = 0; i < nouns.length; i++) {
+    var t = nouns[i];
+    if (t.pos.tag === 'NN') {
+      nn.push(stripWord(t.text));
+    }
+  }
+
+  return nn;
+
 };
 
 // ### Screen Scraping
@@ -102,37 +147,54 @@ function getHeadline(url) {
 // If we're unable to find a headline where we can easily find/replace, we simply try again.
 function tweet() {
   var categoryCodes = ['w', 'n', 'b', 'tc', 'e', 's'];
-  getTopics(categoryCodes.pickRemove()).then(function(topics) {
-    var topic = topics.pickRemove();
-    console.log('topic: ' + topic);
+  getTopics(pickRemove(categoryCodes)).then(function(topics) {
+    var topic = pickRemove(topics);
+    console.log('topic:');
     console.log(topic);
     getHeadline(topic.url).then(function(headline) {
       console.log('headline: ' + headline);
       // replace spaces in name with plus-sign
       // s/b case-insensitive match
-      if (headline.toLowerCase().indexOf(topic.name.toLowerCase()) > -1) {
-        getTopics(categoryCodes.pickRemove()).then(function(topics) {
-          var newTopic = topics.pick();
-          console.log('newtopic: ' + newTopic);
-          console.log(newTopic);
-          // s/b case-insensitve matche
-          var nameRe = new RegExp(topic.name, 'gi');
-          var newHeadline = headline.replace(nameRe, newTopic.name);
-          console.log('orig: ' + headline + '\nnew: ' + newHeadline);
-          // T.post('statuses/update', { status: newHeadline }, function(err, reply) {
-          //   if (err) {
-          //     console.log('error:', err);
-          //   }
-          //   else {
-          //     console.log('reply:', reply);
-          //   }
-          // });
-        });
+
+      try {
+        // for goats, only need one headline
+        var nouns = getNNarray(headline);
+
+        var noun = pickRemove(nouns);
+
+        var goatHeadline = headline.replace(noun, 'goat');
+
+        console.log('old: ' + headline);
+        console.log('new: ' + goatHeadline);
+      } catch(ex) {
+        console.log(ex);
       }
-      else {
-        console.log('couldn\'t find a headline match, trying again...');
-        tweet();
-      }
+
+      // if (headline.toLowerCase().indexOf(topic.name.toLowerCase()) > -1) {
+      //   getTopics(pickRemove(categoryCodes)).then(function(topics) {
+      //     var newTopic = pick(topics);
+      //     console.log('newtopic: ' + newTopic);
+      //     console.log(newTopic);
+      //     // s/b case-insensitve matche
+      //     var nameRe = new RegExp(topic.name, 'gi');
+      //     var newHeadline = headline.replace(nameRe, newTopic.name);
+      //     console.log('orig: ' + headline + '\nnew: ' + newHeadline);
+      //     // T.post('statuses/update', { status: newHeadline }, function(err, reply) {
+      //     //   if (err) {
+      //     //     console.log('error:', err);
+      //     //   }
+      //     //   else {
+      //     //     console.log('reply:', reply);
+      //     //   }
+      //     // });
+      //   });
+      // }
+      // else {
+      //   console.log('couldn\'t find a headline match, trying again...');
+      //   tweet();
+      // }
+
+
     });
   });
 }
