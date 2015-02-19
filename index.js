@@ -39,19 +39,19 @@ var getRandom = function(min,max) {
 
 var stripWord = function(word) {
 
-    // let punctuation and possessives remain
-    // TODO: unit-tests for various errors we encounter
-    // Venice's := Venice
-    // VENICE'S := VENICE
-    // etc.
-    var removals = ['"', ':', '-', ',', '\'s$', '\\(', '\\)', '\\[', '\\]' ];
+  // let punctuation and possessives remain
+  // TODO: unit-tests for various errors we encounter
+  // Venice's := Venice
+  // VENICE'S := VENICE
+  // etc.
+  var removals = ['"', ':', '-', ',', '\'s$', '\\(', '\\)', '\\[', '\\]' ];
 
-    for (var i = 0 ; i < removals.length; i++) {
-	var r = removals[i];
-	word = word.replace(new RegExp(r, 'i'), '');
-    }
+  for (var i = 0 ; i < removals.length; i++) {
+    var r = removals[i];
+    word = word.replace(new RegExp(r, 'i'), '');
+  }
 
-    return word;
+  return word;
 };
 
 
@@ -202,12 +202,14 @@ function tweet() {
 // Tweets once on initialization.
 tweet();
 
-// Tweets every 15 minutes.
+
+// Tweets every n minutes
+// set config.seconds to 60 for a complete minute
 setInterval(function () {
   try {
     tweet();
   }
   catch (e) {
-    console.log('error: ' + e);
+    console.log(e);
   }
-}, 5000 ); // * 60 * 60);
+}, 1000 * config.minutes * config.seconds);
