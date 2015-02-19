@@ -7,8 +7,9 @@
 var request = require('request');
 var cheerio = require('cheerio');
 var _ = require('underscore.deferred');
+var config = require('./config.js');
 var Twit = require('twit');
-var T = new Twit(require('./config.js'));
+var T = new Twit(config);
 var nlp = require('nlp_compromise');
 
 var baseUrl = 'http://news.google.com';
@@ -166,34 +167,20 @@ function tweet() {
 
         console.log('old: ' + headline);
         console.log('new: ' + goatHeadline);
+
+        if (config.tweet_on) {
+          T.post('statuses/update', { status: goatHeadline }, function(err, reply) {
+          if (err) {
+              console.log('error:', err);
+            }
+          else {
+              console.log('reply:', reply);
+            }
+        });
+        }
       } catch(ex) {
         console.log(ex);
       }
-
-      // if (headline.toLowerCase().indexOf(topic.name.toLowerCase()) > -1) {
-      //   getTopics(pickRemove(categoryCodes)).then(function(topics) {
-      //     var newTopic = pick(topics);
-      //     console.log('newtopic: ' + newTopic);
-      //     console.log(newTopic);
-      //     // s/b case-insensitve matche
-      //     var nameRe = new RegExp(topic.name, 'gi');
-      //     var newHeadline = headline.replace(nameRe, newTopic.name);
-      //     console.log('orig: ' + headline + '\nnew: ' + newHeadline);
-      //     // T.post('statuses/update', { status: newHeadline }, function(err, reply) {
-      //     //   if (err) {
-      //     //     console.log('error:', err);
-      //     //   }
-      //     //   else {
-      //     //     console.log('reply:', reply);
-      //     //   }
-      //     // });
-      //   });
-      // }
-      // else {
-      //   console.log('couldn\'t find a headline match, trying again...');
-      //   tweet();
-      // }
-
 
     });
   });
