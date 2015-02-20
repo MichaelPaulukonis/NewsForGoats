@@ -15,10 +15,12 @@ var nlp = require('nlp_compromise');
 var baseUrl = 'http://news.google.com';
 
 
-// TODO: look at huffingboingboing bot for better handling of config elements
-// with regards to git and heroku
-
 // ### Utility Functions
+
+var logger = function(msg) {
+    if (config.log) console.log(msg);
+};
+
 
 // adding to array.prototype caused issues with nlp_compromise
 // get random element from array
@@ -120,7 +122,6 @@ var getGoatWord = function() {
     'toga (anagram)',
     'grass',
     'tin cans',
-    'cans',
     'horn',
     'nimble mountain animal',
     'mountain dweller',
@@ -135,7 +136,19 @@ var isFirstLetterUpperCase = function(str) {
   return (str.charAt(0).toUpperCase() == str.charAt(0));
 };
 
-var capitalize = function(word) {
+var capitalize = function(phrase) {
+
+  var cphrase = [];
+  var splits = phrase.split(' ');
+  for (var i = 0; i < splits.length; i++) {
+    cphrase.push(capitalizeWord(splits[i]));
+  }
+
+  return cphrase.join(' ');
+
+};
+
+var capitalizeWord = function(word) {
   return word.charAt(0).toUpperCase() + word.slice(1);
 };
 
@@ -150,7 +163,7 @@ function getTopics(category) {
   var topics = [];
   var dfd = new _.Deferred();
   var url = baseUrl + '/news/section?ned=us&topic=' + category;
-  console.log('url: ' + url);
+  logger('url: ' + url);
   request(url, function (error, response, body) {
     if (!error && response.statusCode === 200) {
       var $ = cheerio.load(body);
@@ -205,6 +218,7 @@ function getHeadline(url) {
 //      e:  entertainment
 //      s:  sports
 
+// TODO: replace these original notes with ones that make more sense
 // This is the core function that is called on a timer that initiates the @twoheadlines algorithm.
 // First, we get our list of topics from the Google News sidebar.
 // Then we pick-and-remove a random topic from that list.
@@ -217,12 +231,11 @@ function tweet() {
   var categoryCodes = ['w', 'n', 'b', 'tc', 'e', 's'];
   getTopics(pickRemove(categoryCodes)).then(function(topics) {
     var topic = pickRemove(topics);
-    console.log('topic:');
-    console.log(topic);
+    logger('topic:');
+    logger(topic);
+
     getHeadline(topic.url).then(function(headline) {
-      console.log('headline: ' + headline);
-      // replace spaces in name with plus-sign
-      // s/b case-insensitive match
+      logger('headline: ' + headline);
 
       try {
         // for goats, only need one headline
@@ -231,14 +244,39 @@ function tweet() {
         var noun = pickRemove(nouns);
         var goat = getGoatWord();
 
+        console.log('noun: ' + noun);
+        console.log('goat: ' + goat);
+
         if (isFirstLetterUpperCase(noun)){
           goat = capitalize(goat);
+          console.log('Goat: ' + goat);
         }
 
         var goatHeadline = headline.replace(noun, goat);
+        // every now and then, we get an "undefined" for the replaced word
+        // is it getGoatWord() or capitalize?
+
+        // uh.... WHAT'S THAT INTERMEDIATE LINE ?!?!?!
+
+        // 2015-02-20T10:32:08.020441+00:00 app[worker.1]: old: 'Skunk-like' cannabis link to quarter of psychosis cases
+        // 2015-02-20T10:32:08.182428+00:00 app[worker.1]:   id_str: '568719744771227648',
+        // 2015-02-20T10:32:08.020514+00:00 app[worker.1]: new: 'Skunk-like' cannabis link to undefined of psychosis cases
 
         console.log('old: ' + headline);
         console.log('new: ' + goatHeadline);
+
+        // would a different lib do better?
+        // 09:16:58 worker.1 | noun: Oregon Governor Says He Will Resign
+        // 09:16:58 worker.1 | goat: kid
+        // 09:16:58 worker.1 | Goat: Kid
+        // 09:16:58 worker.1 | old: Embattled Oregon Governor Says He Will Resign
+        // 09:16:58 worker.1 | new: Embattled Kid
+
+        // 09:19:48 worker.1 | noun: Rec Writer Harris Wittels Found Dead of Apparent Overdose
+        // 09:19:48 worker.1 | goat: zodiac beast
+        // 09:19:48 worker.1 | Goat: Zodiac beast
+        // 09:19:48 worker.1 | old: Parks and Rec Writer Harris Wittels Found Dead of Apparent Overdose
+        // 09:19:48 worker.1 | new: Parks and Zodiac beast
 
         if (config.tweet_on) {
           T.post('statuses/update', { status: goatHeadline }, function(err, reply) {
@@ -246,7 +284,7 @@ function tweet() {
               console.log('error:', err);
             }
           else {
-              console.log('reply:', reply);
+              logger('tweet success');
             }
         });
         }
@@ -268,7 +306,7 @@ setInterval(function () {
   try {
     tweet();
   }
-  catch (e) {
-    console.log(e);
+  catch (ex) {
+    console.log(ex);
   }
 }, 1000 * config.minutes * config.seconds);
