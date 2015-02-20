@@ -37,6 +37,12 @@ var pickRemove = function(arr) {
 
 
 var getRandom = function(min,max) {
+
+  if (arguments.length == 1) {
+    max = min;
+    min = 0;
+  }
+
   return Math.floor(Math.random() * (max - min) + min);
 };
 
@@ -152,6 +158,33 @@ var capitalizeWord = function(word) {
   return word.charAt(0).toUpperCase() + word.slice(1);
 };
 
+
+// creative respellings
+// http://security.stackexchange.com/questions/80392/never-spell-a-word-the-same-way-twice
+// http://rickconner.net/spamweb/tricks.html#misspelling
+// https://github.com/dariusk/NaNoGenMo/issues/2
+// clean up the mispell.js file and use it, too
+var respell = function(phrase) {
+
+  var redone = phrase;
+
+  // TODO: something....
+  var splits = phrase.split(' ');
+  for (var i = 0; i < splits.length; i++) {
+    if (getRandom(10) == 9) {
+      var word = splits[i];
+      // anything but the last character
+      var pos1 = getRandom(word.length - 1);
+      var wrod = word.substr(0, pos1) + word[pos1+1] + word[pos1] + word.substr(pos1+2);
+
+      redone = redone.replace(word, wrod);
+    }
+  }
+
+  return redone;
+
+};
+
 // ### Screen Scraping
 
 // We pass this function a category code (see `tweet` below). We grab the Google News
@@ -253,6 +286,10 @@ function tweet() {
         }
 
         var goatHeadline = headline.replace(noun, goat);
+
+        goatHeadline = respell(goatHeadline);
+
+
         // every now and then, we get an "undefined" for the replaced word
         // is it getGoatWord() or capitalize?
 
