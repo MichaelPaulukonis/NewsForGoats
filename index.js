@@ -72,6 +72,73 @@ var getNNarray = function(headline) {
 
 };
 
+var getGoatWord = function() {
+
+  // TODO: nice to rank these, somehow....
+  var goats = [
+    'goat',
+    'goat',
+    'goat',
+    'goat',
+    'goat',
+    'goat',
+    'goat',
+    'goat',
+    'goat',
+    'goat',
+    'goat',
+    'goat',
+    'capra aegagrus hircus',
+    'wild goat',
+    'domestic goat',
+    'capra aegagrus hircus',
+    'wild goat',
+    'domestic goat',
+    'capra aegagrus hircus',
+    'wild goat',
+    'domestic goat',
+    'caprinae',
+    'doe',
+    'nanny',
+    'buck',
+    'billy',
+    'ram',
+    'kid',
+    'wether',
+    'modern Ibex',
+    'small livestock animal',
+    'dung-producer',
+    'dung',
+    'zodiac beast',
+    'zodiac animal',,
+    'bearded animal',
+    'bearded beast',
+    'noble beast',
+    'mohair',
+    'mohair provider',
+    'feta source',
+    'toga (anagram)',
+    'grass',
+    'tin cans',
+    'cans',
+    'horn',
+    'nimble mountain animal',
+    'mountain dweller',
+    'shears'
+  ];
+
+  return pick(goats);
+
+};
+
+var isFirstLetterUpperCase = function(str) {
+  return (str.charAt(0).toUpperCase() == str.charAt(0));
+};
+
+var capitalize = function(word) {
+  return word.charAt(0).toUpperCase() + word.slice(1);
+};
+
 // ### Screen Scraping
 
 // We pass this function a category code (see `tweet` below). We grab the Google News
@@ -162,8 +229,13 @@ function tweet() {
         var nouns = getNNarray(headline);
 
         var noun = pickRemove(nouns);
+        var goat = getGoatWord();
 
-        var goatHeadline = headline.replace(noun, 'goat');
+        if (isFirstLetterUpperCase(noun)){
+          goat = capitalize(goat);
+        }
+
+        var goatHeadline = headline.replace(noun, goat);
 
         console.log('old: ' + headline);
         console.log('new: ' + goatHeadline);
