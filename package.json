@@ -23,7 +23,8 @@
     "cheerio": "~0.12.1",
     "twit": "~1.1.9",
     "underscore.deferred": "~0.4.0",
-    "nlp_compromise": "~0.3.1"
+    "nlp_compromise": "~0.3.1",
+    "pos": "~0.1.7-2"
   },
   "devDependencies": {
     "grunt": "~0.4.1",

@@ -11,6 +11,7 @@ var config = require('./config.js');
 var Twit = require('twit');
 var T = new Twit(config);
 var nlp = require('nlp_compromise');
+var pos = require('pos');
 
 var baseUrl = 'http://news.google.com';
 
@@ -18,7 +19,7 @@ var baseUrl = 'http://news.google.com';
 // ### Utility Functions
 
 var logger = function(msg) {
-    if (config.log) console.log(msg);
+  if (config.log) console.log(msg);
 };
 
 
@@ -63,15 +64,21 @@ var stripWord = function(word) {
   return word;
 };
 
+var getNounArray = function(headline) {
+  // original implementation
+  // return getNounArrayCompromise(headline);
+  return getNounArrayPos(headline);
+};
 
-var getNNarray = function(headline) {
+var getNounArrayCompromise = function(headline) {
 
   var nn = [];
   var nouns = nlp.pos(headline).nouns();
 
+  var targetPos = 'NNPSNNS'; // NN, NNP, NNPS, NNS
   for (var i = 0; i < nouns.length; i++) {
     var t = nouns[i];
-    if (t.pos.tag === 'NN') {
+    if (targetPos.indexOf(t.pos.tag) > -1) {
       nn.push(stripWord(t.text));
     }
   }
@@ -79,6 +86,39 @@ var getNNarray = function(headline) {
   return nn;
 
 };
+
+// now, I'd like it if subsequent nouns were combined into one
+// so the below, 'Oregon Governor' would be one element
+// but.... need tests to prove there are not situations where that would be a problem
+var getNounArrayPos = function(headline) {
+
+  //  var pos = require('pos');
+  //  var s = 'Embattled Oregon Governor Says He Will Resign'
+  //  var words = new pos.Lexer().lex(s);
+  //  var taggedWords = new pos.Tagger().tag(words);
+  //  taggedWords
+  // [ [ 'Embattled', 'JJ' ],
+  //   [ 'Oregon', 'NNP' ],
+  //   [ 'Governor', 'NNP' ],
+  //   [ 'Says', 'VBZ' ],
+  //   [ 'He', 'PRP' ],
+  //   [ 'Will', 'MD' ],
+  //   [ 'Resign', 'VB' ] ]
+  var nn = [];
+  var targetPos = 'NNPSNNS'; // NN, NNP, NNPS, NNS
+  var words = new pos.Lexer().lex(headline);
+  var taggedWords = new pos.Tagger().tag(words);
+  for (i in taggedWords) {
+    var taggedWord = taggedWords[i];
+    if (targetPos.indexOf(taggedWord[1]) > -1) {
+      nn.push(taggedWord[0]);
+    }
+  }
+
+  return nn;
+
+};
+
 
 var getGoatWord = function() {
 
@@ -118,14 +158,14 @@ var getGoatWord = function() {
     'dung-producer',
     'dung',
     'zodiac beast',
-    'zodiac animal',,
+    'zodiac animal',
     'bearded animal',
     'bearded beast',
     'noble beast',
     'mohair',
     'mohair provider',
     'feta source',
-    'toga (anagram)',
+    'mixed-up toga',
     'grass',
     'tin cans',
     'horn',
@@ -138,6 +178,8 @@ var getGoatWord = function() {
 
 };
 
+// TODO: we should _match_ capitalization
+// if all caps, all-caps it!
 var isFirstLetterUpperCase = function(str) {
   return (str.charAt(0).toUpperCase() == str.charAt(0));
 };
@@ -171,7 +213,7 @@ var respell = function(phrase) {
   // TODO: something....
   var splits = phrase.split(' ');
   for (var i = 0; i < splits.length; i++) {
-    if (getRandom(10) == 9) {
+    if (getRandom(10) >= 8 && splits[i].length > 3) {
       var word = splits[i];
       // anything but the last character
       var pos1 = getRandom(word.length - 1);
@@ -272,7 +314,7 @@ function tweet() {
 
       try {
         // for goats, only need one headline
-        var nouns = getNNarray(headline);
+        var nouns = getNounArray(headline);
 
         var noun = pickRemove(nouns);
         var goat = getGoatWord();
@@ -317,13 +359,13 @@ function tweet() {
 
         if (config.tweet_on) {
           T.post('statuses/update', { status: goatHeadline }, function(err, reply) {
-          if (err) {
+            if (err) {
               console.log('error:', err);
             }
-          else {
+            else {
               logger('tweet success');
             }
-        });
+          });
         }
       } catch(ex) {
         console.log(ex);
