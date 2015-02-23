@@ -105,13 +105,22 @@ var getNounArrayPos = function(headline) {
   //   [ 'Will', 'MD' ],
   //   [ 'Resign', 'VB' ] ]
   var nn = [];
+  var currn = [];
+  var active = false;
   var targetPos = 'NNPSNNS'; // NN, NNP, NNPS, NNS
   var words = new pos.Lexer().lex(headline);
   var taggedWords = new pos.Tagger().tag(words);
   for (i in taggedWords) {
     var taggedWord = taggedWords[i];
     if (targetPos.indexOf(taggedWord[1]) > -1) {
-      nn.push(taggedWord[0]);
+      // consider sequention nouns to be a noun-phrase
+      // this is probably a crap algorithm
+      currn.push(taggedWord[0]);
+    } else {
+      if (currn.length > 0) {
+        nn.push(currn.join(' '));
+        currn = [];
+      }
     }
   }
 
@@ -211,12 +220,19 @@ var respell = function(phrase) {
   var redone = phrase;
 
   // TODO: something....
-  var splits = phrase.split(' ');
-  for (var i = 0; i < splits.length; i++) {
-    if (getRandom(10) >= 8 && splits[i].length > 3) {
-      var word = splits[i];
-      // anything but the last character
-      var pos1 = getRandom(word.length - 1);
+  // currently we have 1 strategy - swap letters
+  // there could be others -- replace words, certain letters, elongation (e => ee) etc.
+  // more like a library, I suppose
+  // which could be fun!
+  var words = new pos.Lexer().lex(phrase);
+  for (var i = 0; i < words.length; i++) {
+    var word = words[i];
+    var isAlpha = /^[a-z]+/i.test(words[i]);
+    // 4-letter+ words ("in" and "and" are too annoying mixed up)
+    if (isAlpha && getRandom(10) >= 8 && word.length > 3) {
+      // don't use the first char (too oCnfusing)
+      // one less than last char, since we do n+1
+      var pos1 = getRandom(word.length - 2) + 1;
       var wrod = word.substr(0, pos1) + word[pos1+1] + word[pos1] + word.substr(pos1+2);
 
       redone = redone.replace(word, wrod);
@@ -315,57 +331,60 @@ function tweet() {
       try {
         // for goats, only need one headline
         var nouns = getNounArray(headline);
+        // if no nouns, skip
+        // this means we skip a tweet
+        // look at the BoingBoingHuffr architecture for promises, etc.
+        if (nouns.length > 0) {
+          var noun = pickRemove(nouns);
+          var goat = getGoatWord();
 
-        var noun = pickRemove(nouns);
-        var goat = getGoatWord();
+          console.log('noun: ' + noun);
+          console.log('goat: ' + goat);
 
-        console.log('noun: ' + noun);
-        console.log('goat: ' + goat);
+          if (isFirstLetterUpperCase(noun)){
+            goat = capitalize(goat);
+            console.log('Goat: ' + goat);
+          }
 
-        if (isFirstLetterUpperCase(noun)){
-          goat = capitalize(goat);
-          console.log('Goat: ' + goat);
-        }
+          var goatHeadline = headline.replace(noun, goat);
 
-        var goatHeadline = headline.replace(noun, goat);
+          goatHeadline = respell(goatHeadline);
 
-        goatHeadline = respell(goatHeadline);
+          // every now and then, we get an "undefined" for the replaced word
+          // is it getGoatWord() or capitalize?
 
+          // uh.... WHAT'S THAT INTERMEDIATE LINE ?!?!?!
 
-        // every now and then, we get an "undefined" for the replaced word
-        // is it getGoatWord() or capitalize?
+          // 2015-02-20T10:32:08.020441+00:00 app[worker.1]: old: 'Skunk-like' cannabis link to quarter of psychosis cases
+          // 2015-02-20T10:32:08.182428+00:00 app[worker.1]:   id_str: '568719744771227648',
+          // 2015-02-20T10:32:08.020514+00:00 app[worker.1]: new: 'Skunk-like' cannabis link to undefined of psychosis cases
 
-        // uh.... WHAT'S THAT INTERMEDIATE LINE ?!?!?!
+          console.log('old: ' + headline);
+          console.log('new: ' + goatHeadline);
 
-        // 2015-02-20T10:32:08.020441+00:00 app[worker.1]: old: 'Skunk-like' cannabis link to quarter of psychosis cases
-        // 2015-02-20T10:32:08.182428+00:00 app[worker.1]:   id_str: '568719744771227648',
-        // 2015-02-20T10:32:08.020514+00:00 app[worker.1]: new: 'Skunk-like' cannabis link to undefined of psychosis cases
+          // would a different lib do better?
+          // 09:16:58 worker.1 | noun: Oregon Governor Says He Will Resign
+          // 09:16:58 worker.1 | goat: kid
+          // 09:16:58 worker.1 | Goat: Kid
+          // 09:16:58 worker.1 | old: Embattled Oregon Governor Says He Will Resign
+          // 09:16:58 worker.1 | new: Embattled Kid
 
-        console.log('old: ' + headline);
-        console.log('new: ' + goatHeadline);
+          // 09:19:48 worker.1 | noun: Rec Writer Harris Wittels Found Dead of Apparent Overdose
+          // 09:19:48 worker.1 | goat: zodiac beast
+          // 09:19:48 worker.1 | Goat: Zodiac beast
+          // 09:19:48 worker.1 | old: Parks and Rec Writer Harris Wittels Found Dead of Apparent Overdose
+          // 09:19:48 worker.1 | new: Parks and Zodiac beast
 
-        // would a different lib do better?
-        // 09:16:58 worker.1 | noun: Oregon Governor Says He Will Resign
-        // 09:16:58 worker.1 | goat: kid
-        // 09:16:58 worker.1 | Goat: Kid
-        // 09:16:58 worker.1 | old: Embattled Oregon Governor Says He Will Resign
-        // 09:16:58 worker.1 | new: Embattled Kid
-
-        // 09:19:48 worker.1 | noun: Rec Writer Harris Wittels Found Dead of Apparent Overdose
-        // 09:19:48 worker.1 | goat: zodiac beast
-        // 09:19:48 worker.1 | Goat: Zodiac beast
-        // 09:19:48 worker.1 | old: Parks and Rec Writer Harris Wittels Found Dead of Apparent Overdose
-        // 09:19:48 worker.1 | new: Parks and Zodiac beast
-
-        if (config.tweet_on) {
-          T.post('statuses/update', { status: goatHeadline }, function(err, reply) {
-            if (err) {
-              console.log('error:', err);
-            }
-            else {
-              logger('tweet success');
-            }
-          });
+          if (config.tweet_on) {
+            T.post('statuses/update', { status: goatHeadline }, function(err, reply) {
+              if (err) {
+                console.log('error:', err);
+              }
+              else {
+                logger('tweet success');
+              }
+            });
+          }
         }
       } catch(ex) {
         console.log(ex);
