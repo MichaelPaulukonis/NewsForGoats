@@ -12,6 +12,8 @@ var Twit = require('twit');
 var T = new Twit(config);
 var nlp = require('nlp_compromise');
 var pos = require('pos');
+var spells = require('./mispel.js');
+
 
 var baseUrl = 'http://news.google.com';
 
@@ -46,6 +48,14 @@ var getRandom = function(min,max) {
 
   return Math.floor(Math.random() * (max - min) + min);
 };
+
+// return true or false
+// 50-50 chance (unless override)
+var coinflip = function(chance) {
+  if (!chance) { chance = 0.5; }
+  return (Math.random() < chance);
+};
+
 
 var stripWord = function(word) {
 
@@ -110,7 +120,7 @@ var getNounArrayPos = function(headline) {
   var targetPos = 'NNPSNNS'; // NN, NNP, NNPS, NNS
   var words = new pos.Lexer().lex(headline);
   var taggedWords = new pos.Tagger().tag(words);
-  for (i in taggedWords) {
+  for (var i in taggedWords) {
     var taggedWord = taggedWords[i];
     if (targetPos.indexOf(taggedWord[1]) > -1) {
       // consider sequention nouns to be a noun-phrase
@@ -144,8 +154,6 @@ var getGoatWord = function() {
     'goat',
     'goat',
     'goat',
-    'goat',
-    'capra aegagrus hircus',
     'wild goat',
     'domestic goat',
     'capra aegagrus hircus',
@@ -214,28 +222,41 @@ var capitalizeWord = function(word) {
 // http://security.stackexchange.com/questions/80392/never-spell-a-word-the-same-way-twice
 // http://rickconner.net/spamweb/tricks.html#misspelling
 // https://github.com/dariusk/NaNoGenMo/issues/2
-// clean up the mispell.js file and use it, too
 var respell = function(phrase) {
 
   var redone = phrase;
 
-  // TODO: something....
-  // currently we have 1 strategy - swap letters
-  // there could be others -- replace words, certain letters, elongation (e => ee) etc.
-  // more like a library, I suppose
-  // which could be fun!
   var words = new pos.Lexer().lex(phrase);
   for (var i = 0; i < words.length; i++) {
     var word = words[i];
     var isAlpha = /^[a-z]+/i.test(words[i]);
-    // 4-letter+ words ("in" and "and" are too annoying mixed up)
-    if (isAlpha && getRandom(10) >= 8 && word.length > 3) {
-      // don't use the first char (too oCnfusing)
-      // one less than last char, since we do n+1
-      var pos1 = getRandom(word.length - 2) + 1;
-      var wrod = word.substr(0, pos1) + word[pos1+1] + word[pos1] + word.substr(pos1+2);
 
-      redone = redone.replace(word, wrod);
+    // overall chance of mis-spelling
+    if (coinflip(.2)) {
+
+      var found = spells[word.toLowerCase()];
+
+      // pick a strategy
+      // if found, use the mis-spelling in most cases
+      if (found && coinflip(.75)) {
+        var wrod = pick(spells[word.toLowerCase()]);
+        if (isFirstLetterUpperCase(word)) {
+          wrod = capitalizeWord(wrod);
+        }
+        console.log(word + ' : ' + wrod);
+        redone = redone.replace(word, wrod);
+      } else {
+
+        // 4-letter+ words ("in" and "and" are too annoying mixed up)
+        if (isAlpha && word.length > 3) {
+          // don't use the first char (too oCnfusing)
+          // one less than last char, since we do n+1
+          var pos1 = getRandom(word.length - 2) + 1;
+          wrod = word.substr(0, pos1) + word[pos1+1] + word[pos1] + word.substr(pos1+2);
+
+          redone = redone.replace(word, wrod);
+        }
+      }
     }
   }
 
@@ -348,6 +369,9 @@ function tweet() {
 
           var goatHeadline = headline.replace(noun, goat);
 
+          console.log('old: ' + headline);
+          console.log('spelled: ' + goatHeadline);
+
           goatHeadline = respell(goatHeadline);
 
           // every now and then, we get an "undefined" for the replaced word
@@ -359,7 +383,6 @@ function tweet() {
           // 2015-02-20T10:32:08.182428+00:00 app[worker.1]:   id_str: '568719744771227648',
           // 2015-02-20T10:32:08.020514+00:00 app[worker.1]: new: 'Skunk-like' cannabis link to undefined of psychosis cases
 
-          console.log('old: ' + headline);
           console.log('new: ' + goatHeadline);
 
           // would a different lib do better?
