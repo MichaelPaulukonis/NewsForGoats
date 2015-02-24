@@ -10,7 +10,6 @@ var _ = require('underscore.deferred');
 var config = require('./config.js');
 var Twit = require('twit');
 var T = new Twit(config);
-var nlp = require('nlp_compromise');
 var pos = require('pos');
 var spells = require('./mispel.js');
 
@@ -80,26 +79,6 @@ var getNounArray = function(headline) {
   return getNounArrayPos(headline);
 };
 
-var getNounArrayCompromise = function(headline) {
-
-  var nn = [];
-  var nouns = nlp.pos(headline).nouns();
-
-  var targetPos = 'NNPSNNS'; // NN, NNP, NNPS, NNS
-  for (var i = 0; i < nouns.length; i++) {
-    var t = nouns[i];
-    if (targetPos.indexOf(t.pos.tag) > -1) {
-      nn.push(stripWord(t.text));
-    }
-  }
-
-  return nn;
-
-};
-
-// now, I'd like it if subsequent nouns were combined into one
-// so the below, 'Oregon Governor' would be one element
-// but.... need tests to prove there are not situations where that would be a problem
 var getNounArrayPos = function(headline) {
 
   //  var pos = require('pos');
@@ -154,6 +133,7 @@ var getGoatWord = function() {
     'goat',
     'goat',
     'goat',
+    'THE GOAT!',
     'wild goat',
     'domestic goat',
     'capra aegagrus hircus',
@@ -162,13 +142,18 @@ var getGoatWord = function() {
     'capra aegagrus hircus',
     'wild goat',
     'domestic goat',
+    'magnificent goat',
+    'hirsute wonder',
+    'wondrous goat',
+    'amazing goat',
+    'beloved goat',
     'caprinae',
     'doe',
-    'nanny',
+    'nanny goat',
     'buck',
-    'billy',
+    'billy goat',
     'ram',
-    'kid',
+    'kid goat',
     'wether',
     'modern Ibex',
     'small livestock animal',
@@ -217,6 +202,9 @@ var capitalizeWord = function(word) {
   return word.charAt(0).toUpperCase() + word.slice(1);
 };
 
+var isVowell = function(letter) {
+    return /^[aeiou]/i.test(letter);
+};
 
 // creative respellings
 // http://security.stackexchange.com/questions/80392/never-spell-a-word-the-same-way-twice
@@ -230,33 +218,46 @@ var respell = function(phrase) {
   for (var i = 0; i < words.length; i++) {
     var word = words[i];
     var isAlpha = /^[a-z]+/i.test(words[i]);
+    var wrod = '';
 
     // overall chance of mis-spelling
-    if (coinflip(.2)) {
+    if (isAlpha && coinflip(.2)) {
 
       var found = spells[word.toLowerCase()];
 
       // pick a strategy
       // if found, use the mis-spelling in most cases
       if (found && coinflip(.75)) {
-        var wrod = pick(spells[word.toLowerCase()]);
+        wrod = pick(spells[word.toLowerCase()]);
         if (isFirstLetterUpperCase(word)) {
           wrod = capitalizeWord(wrod);
         }
-        console.log(word + ' : ' + wrod);
-        redone = redone.replace(word, wrod);
+      } else if (coinflip()) {
+        for (var l = 0; l < word.length; l++) {
+          if (isVowell(word[l]) && coinflip(0.3)) {
+            // how crazy do we want to be ... more than 3 vowells?
+            wrod += word[l] + word[l];
+            if (coinflip(0.2)) wrod += word[l];
+          } else {
+            wrod += word[l];
+          }
+        }
+        console.log('doubler: ' + wrod);
       } else {
-
         // 4-letter+ words ("in" and "and" are too annoying mixed up)
-        if (isAlpha && word.length > 3) {
+        if (word.length > 3) {
           // don't use the first char (too oCnfusing)
           // one less than last char, since we do n+1
           var pos1 = getRandom(word.length - 2) + 1;
           wrod = word.substr(0, pos1) + word[pos1+1] + word[pos1] + word.substr(pos1+2);
-
-          redone = redone.replace(word, wrod);
+        } else {
+          wrod = word;
         }
       }
+      logger(word + ' : ' + wrod);
+      // 22:39:44 worker.1 | doubler: aat
+      // 22:39:44 worker.1 | new: McCaatty preaching goat at a time
+      redone = redone.replace(word, wrod); // this is crap, if the same word occurs more than once
     }
   }
 
@@ -359,18 +360,18 @@ function tweet() {
           var noun = pickRemove(nouns);
           var goat = getGoatWord();
 
-          console.log('noun: ' + noun);
-          console.log('goat: ' + goat);
+          logger('noun: ' + noun);
+          logger('goat: ' + goat);
 
           if (isFirstLetterUpperCase(noun)){
             goat = capitalize(goat);
-            console.log('Goat: ' + goat);
+            logger('Goat: ' + goat);
           }
 
           var goatHeadline = headline.replace(noun, goat);
 
           console.log('old: ' + headline);
-          console.log('spelled: ' + goatHeadline);
+          logger('spelled: ' + goatHeadline);
 
           goatHeadline = respell(goatHeadline);
 

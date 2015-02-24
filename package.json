@@ -1,29 +1,28 @@
 {
-  "name": "twoheadlines",
-  "version": "0.0.1",
-  "description": "Confused about the news.",
+  "name": "newsforgoats",
+  "version": "0.0.2",
+  "description": "Eat it, or wear it.",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
-    "url": "git@github.com:dariusk/twoheadlines.git"
+    "url": "git@github.com:michaelpaulukonis/newsforgoats.git"
   },
-  "author": "Darius Kazemi",
+  "author": "Michael Paulukonis",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/dariusk/twoheadlines/issues"
+    "url": "https://github.com/michaelpaulukonis/newsforgoats/issues"
   },
   "engines": {
-    "node": "0.10.17"
+    "node": "0.12.0"
   },
   "dependencies": {
     "request": "~2.27.0",
     "cheerio": "~0.12.1",
     "twit": "~1.1.9",
     "underscore.deferred": "~0.4.0",
-    "nlp_compromise": "~0.3.1",
     "pos": "~0.1.7-2"
   },
   "devDependencies": {
