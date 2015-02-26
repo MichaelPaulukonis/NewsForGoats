@@ -255,13 +255,55 @@ var respell = function(phrase) {
         }
       }
       logger(word + ' : ' + wrod);
-      // 22:39:44 worker.1 | doubler: aat
-      // 22:39:44 worker.1 | new: McCaatty preaching goat at a time
-      redone = redone.replace(word, wrod); // this is crap, if the same word occurs more than once
+      // this is crap, if the same word occurs more than once
+      // also unsure how to skip some things. AWKWARD.
+      redone = redone.replace(new RegExp('\\b' + word + '\\b'), wrod);
     }
   }
 
   return redone;
+
+};
+
+var tagit = function(status) {
+
+  var tags = [
+    'newsforgoats',
+    'goat',
+    'goats',
+    'wildgoat',
+    'domesticgoat',
+    'capraaegagrushircus',
+    'magnificentgoat',
+    'hirsutewonder',
+    'caprinae',
+    'billygoat',
+    'modernIbex',
+    'smalllivestockanimal',
+    'dungproducer',
+    'zodiacbeast',
+    'zodiacanimal',
+    'beardedanimal',
+    'beardedbeast',
+    'noblebeast',
+    'mohair',
+    'mohairprovider',
+    'mountaindweller'
+  ];
+
+  var appendTag = ' #' + pickRemove(tags);
+  var notAssigned = true;
+  // while ((status + appendTag).length > 140) {
+  while (true) {
+    if ((status + appendTag).length <= 140) {
+      status += appendTag;
+      break;
+    }
+    appendTag = ' #' + pickRemove(tags);
+    if (appendTag.indexOf('undefined') > -1) break;
+  }
+
+  return status;
 
 };
 
@@ -375,29 +417,9 @@ function tweet() {
 
           goatHeadline = respell(goatHeadline);
 
-          // every now and then, we get an "undefined" for the replaced word
-          // is it getGoatWord() or capitalize?
-
-          // uh.... WHAT'S THAT INTERMEDIATE LINE ?!?!?!
-
-          // 2015-02-20T10:32:08.020441+00:00 app[worker.1]: old: 'Skunk-like' cannabis link to quarter of psychosis cases
-          // 2015-02-20T10:32:08.182428+00:00 app[worker.1]:   id_str: '568719744771227648',
-          // 2015-02-20T10:32:08.020514+00:00 app[worker.1]: new: 'Skunk-like' cannabis link to undefined of psychosis cases
+          goatHeadline = tagit(goatHeadline);
 
           console.log('new: ' + goatHeadline);
-
-          // would a different lib do better?
-          // 09:16:58 worker.1 | noun: Oregon Governor Says He Will Resign
-          // 09:16:58 worker.1 | goat: kid
-          // 09:16:58 worker.1 | Goat: Kid
-          // 09:16:58 worker.1 | old: Embattled Oregon Governor Says He Will Resign
-          // 09:16:58 worker.1 | new: Embattled Kid
-
-          // 09:19:48 worker.1 | noun: Rec Writer Harris Wittels Found Dead of Apparent Overdose
-          // 09:19:48 worker.1 | goat: zodiac beast
-          // 09:19:48 worker.1 | Goat: Zodiac beast
-          // 09:19:48 worker.1 | old: Parks and Rec Writer Harris Wittels Found Dead of Apparent Overdose
-          // 09:19:48 worker.1 | new: Parks and Zodiac beast
 
           if (config.tweet_on) {
             T.post('statuses/update', { status: goatHeadline }, function(err, reply) {
