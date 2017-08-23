@@ -442,15 +442,3 @@ function tweet() {
 
 // Tweets once on initialization.
 tweet();
-
-
-// Tweets every n minutes
-// set config.seconds to 60 for a complete minute
-setInterval(function () {
-  try {
-    tweet();
-  }
-  catch (ex) {
-    console.log(ex);
-  }
-}, 1000 * config.minutes * config.seconds);
