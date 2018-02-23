@@ -203,7 +203,7 @@ var capitalizeWord = function(word) {
 };
 
 var isVowell = function(letter) {
-    return /^[aeiou]/i.test(letter);
+  return /^[aeiou]/i.test(letter);
 };
 
 // creative respellings
@@ -314,6 +314,7 @@ var tagit = function(status) {
 // text from the links in the left-hand bar, which becomes a list of topics.
 // For example, if we passed it 'e' for Entertainment, we might get: Miley Cyrus, Oscars,
 // Kanye West, and so on.
+// TODO: these are all different, now....
 function getTopics(category) {
   var topics = [];
   var dfd = new _.Deferred();
@@ -384,60 +385,61 @@ function getHeadline(url) {
 // If we're unable to find a headline where we can easily find/replace, we simply try again.
 function tweet() {
   var categoryCodes = ['w', 'n', 'b', 'tc', 'e', 's'];
-  getTopics(pickRemove(categoryCodes)).then(function(topics) {
-    var topic = pickRemove(topics);
-    logger('topic:');
-    logger(topic);
+  getTopics(pickRemove(categoryCodes))
+    .then(function(topics) {
+      var topic = pickRemove(topics);
+      logger('topic:');
+      logger(topic);
 
-    getHeadline(topic.url).then(function(headline) {
-      logger('headline: ' + headline);
+      getHeadline(topic.url).then(function(headline) {
+        logger('headline: ' + headline);
 
-      try {
-        // for goats, only need one headline
-        var nouns = getNounArray(headline);
-        // if no nouns, skip
-        // this means we skip a tweet
-        // look at the BoingBoingHuffr architecture for promises, etc.
-        if (nouns.length > 0) {
-          var noun = pickRemove(nouns);
-          var goat = getGoatWord();
+        try {
+          // for goats, only need one headline
+          var nouns = getNounArray(headline);
+          // if no nouns, skip
+          // this means we skip a tweet
+          // look at the BoingBoingHuffr architecture for promises, etc.
+          if (nouns.length > 0) {
+            var noun = pickRemove(nouns);
+            var goat = getGoatWord();
 
-          logger('noun: ' + noun);
-          logger('goat: ' + goat);
+            logger('noun: ' + noun);
+            logger('goat: ' + goat);
 
-          if (isFirstLetterUpperCase(noun)){
-            goat = capitalize(goat);
-            logger('Goat: ' + goat);
+            if (isFirstLetterUpperCase(noun)){
+              goat = capitalize(goat);
+              logger('Goat: ' + goat);
+            }
+
+            var goatHeadline = headline.replace(noun, goat);
+
+            console.log('old: ' + headline);
+            logger('spelled: ' + goatHeadline);
+
+            goatHeadline = respell(goatHeadline);
+
+            goatHeadline = tagit(goatHeadline);
+
+            console.log('new: ' + goatHeadline);
+
+            if (config.tweet_on) {
+              T.post('statuses/update', { status: goatHeadline }, function(err, reply) {
+                if (err) {
+                  console.log('error:', err);
+                }
+                else {
+                  logger('tweet success');
+                }
+              });
+            }
           }
-
-          var goatHeadline = headline.replace(noun, goat);
-
-          console.log('old: ' + headline);
-          logger('spelled: ' + goatHeadline);
-
-          goatHeadline = respell(goatHeadline);
-
-          goatHeadline = tagit(goatHeadline);
-
-          console.log('new: ' + goatHeadline);
-
-          if (config.tweet_on) {
-            T.post('statuses/update', { status: goatHeadline }, function(err, reply) {
-              if (err) {
-                console.log('error:', err);
-              }
-              else {
-                logger('tweet success');
-              }
-            });
-          }
+        } catch(ex) {
+          console.log(ex);
         }
-      } catch(ex) {
-        console.log(ex);
-      }
 
+      });
     });
-  });
 }
 
 // Tweets once on initialization.
